@@ -2,20 +2,12 @@
   <div>
   <input type="text" class="todo-input" placeholder="add new todo item here " v-model="newTodo" @keyup.enter="addTodo">
  <transition-group name="fade" enter-active-class="animated fadeInUp" leave-active-class="animated fadeOutDown">
-    <div v-for="(todo, index) in todosFiltered" :key="todo.id" class="todo-item">
-   <div class="todo-item-left">
-     <input type="checkbox" v-model="todo.completed">
-     <div v-if="!todo.editing" @dblclick="editTodo(todo)" class="todo-item-label" :class="{ completed : todo.completed }">{{ todo.title }}</div>
-     <input v-else class="todo-item-edit" type="text" v-model="todo.title" @blur="doneEdit(todo)" @keyup.enter="doneEdit(todo)" @keyup.esc="cancelEdit(todo)" v-focus>
-   </div>
-<div class="remove-item" @click="removeTodo(index)">
-&times;
-</div>
- </div>
+    <todo-item v-for="(todo, index) in todosFiltered" :key="todo.id" :todo="todo" :index="index" :checkAll="!anyRemaining" @removedTodo="removeTodo" @finishedEdit="finishedEdit">
+ </todo-item>
  </transition-group>
 
     <div class="extra-container">
-      <div><label><input type="checkbox" :checked="!anyRemaining" @change="checkAllTodos"> Check All</label></div>
+      <div><label><input type="checkbox" :checked="!anyRemaining" @change="checkAllTodos" ref="selected"> {{ checkAll }} All</label></div>
       <div>{{ remaining }} items left</div>
     </div>
 
@@ -40,24 +32,23 @@
 </template>
 
 <script>
+  import TodoItem from './TodoItem'
     export default {
         name: "TodoList",
+      components: {
+          TodoItem,
+      },
       data (){
           return{
             newTodo:'',
             idForTodo: 3,
             beforeEditCache:'',
             filter: 'all',
+            checkAll: 'Check',
             todos: [
               {
                 'id':1,
-                'title':'Finish Vue Todo App',
-                'completed':false,
-                'editing':false,
-              },
-              {
-                'id':2,
-                'title':'Do stuff to this',
+                'title':'Todo Sample Item',
                 'completed':false,
                 'editing':false,
               },
@@ -85,16 +76,6 @@
           return this.todos.filter(todo => todo.completed).length > 0
         }
       },
-
-      directives:{
-          focus:{
-            // directive definition
-            inserted: function (el) {
-              el.focus()
-            }
-          }
-      },
-
       methods: {
           addTodo() {
 
@@ -106,40 +87,34 @@
             id: this.idForTodo,
             title: this.newTodo,
             completed: false,
+            editing: false,
           })
             this.newTodo = ''
             this.idForTodo++
           },
-
-        editTodo(todo){
-            this.beforeEditCache = todo.title
-            todo.editing = true
-        },
-
-        doneEdit(todo){
-          if (todo.title.trim() == ''){
-            todo.title = this.beforeEditCache
-          }
-            todo.editing = false
-        },
-
-        cancelEdit(todo){
-          todo.title = this.beforeEditCache
-          todo.editing = false
-
-        },
 
         removeTodo(index){
             this.todos.splice(index,1)
         },
 
         checkAllTodos(){
-            this.todos.forEach((todo) => todo.completed = event.target.checked)
+          this.todos.forEach((todo) => todo.completed = event.target.checked)
+          if (this.$refs.selected.checked == true){
+            return this.checkAll = 'Uncheck'
+          } else {
+            return this.checkAll = 'Check'
+          }
+
         },
 
         clearCompleted(){
             this.todos = this.todos.filter(todo => !todo.completed)
+        },
+
+        finishedEdit(data){
+            this.todos.splice(data.index, 1, data.todo)
         }
+
 
       }
     }
@@ -147,6 +122,7 @@
 
 <style lang="scss">
   @import url("https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css");
+  @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css");
 
  .todo-input{
    width: 100%;
@@ -172,6 +148,12 @@
     margin-left: 14px;
     &:hover{
       color:red;
+    }
+  }  .edit-item {
+    cursor: pointer;
+         margin-left: 14px;
+         &:hover{
+      color:green;
     }
   }
     .todo-item-left { //later
